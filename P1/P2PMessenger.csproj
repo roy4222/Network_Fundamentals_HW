@@ -1,0 +1,31 @@
+<!--
+  UDP P2P 訊息應用程式專案檔
+  這是一個基於 .NET 9.0 的 Windows Forms 應用程式
+  實現了 UDP 點對點文字訊息通訊功能
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- 輸出類型：Windows 可執行檔 (WinExe) -->
+    <OutputType>WinExe</OutputType>
+    
+    <!-- 目標框架：.NET 9.0 Windows 專用版本 -->
+    <TargetFramework>net9.0-windows</TargetFramework>
+    
+    <!-- 啟用 Windows Forms 支援 -->
+    <UseWindowsForms>true</UseWindowsForms>
+    
+    <!-- 啟用可空參考類型檢查，提高程式碼安全性 -->
+    <Nullable>enable</Nullable>
+    
+    <!-- 組件標題：顯示在檔案屬性中 -->
+    <AssemblyTitle>UDP P2P Messenger</AssemblyTitle>
+    
+    <!-- 組件描述：應用程式功能說明 -->
+    <AssemblyDescription>UDP點對點文字訊息應用程式</AssemblyDescription>
+    
+    <!-- 組件版本：里程碑 1 完成版本 -->
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+  </PropertyGroup>
+
+</Project> 

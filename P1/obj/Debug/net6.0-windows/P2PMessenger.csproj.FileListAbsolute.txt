@@ -1,0 +1,14 @@
+C:\Users\User\Desktop\網路概論自主學習作業\P1\bin\Debug\net6.0-windows\P2PMessenger.exe
+C:\Users\User\Desktop\網路概論自主學習作業\P1\bin\Debug\net6.0-windows\P2PMessenger.deps.json
+C:\Users\User\Desktop\網路概論自主學習作業\P1\bin\Debug\net6.0-windows\P2PMessenger.runtimeconfig.json
+C:\Users\User\Desktop\網路概論自主學習作業\P1\bin\Debug\net6.0-windows\P2PMessenger.dll
+C:\Users\User\Desktop\網路概論自主學習作業\P1\bin\Debug\net6.0-windows\P2PMessenger.pdb
+C:\Users\User\Desktop\網路概論自主學習作業\P1\obj\Debug\net6.0-windows\P2PMessenger.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\User\Desktop\網路概論自主學習作業\P1\obj\Debug\net6.0-windows\P2PMessenger.AssemblyInfoInputs.cache
+C:\Users\User\Desktop\網路概論自主學習作業\P1\obj\Debug\net6.0-windows\P2PMessenger.AssemblyInfo.cs
+C:\Users\User\Desktop\網路概論自主學習作業\P1\obj\Debug\net6.0-windows\P2PMessenger.csproj.CoreCompileInputs.cache
+C:\Users\User\Desktop\網路概論自主學習作業\P1\obj\Debug\net6.0-windows\P2PMessenger.dll
+C:\Users\User\Desktop\網路概論自主學習作業\P1\obj\Debug\net6.0-windows\refint\P2PMessenger.dll
+C:\Users\User\Desktop\網路概論自主學習作業\P1\obj\Debug\net6.0-windows\P2PMessenger.pdb
+C:\Users\User\Desktop\網路概論自主學習作業\P1\obj\Debug\net6.0-windows\P2PMessenger.genruntimeconfig.cache
+C:\Users\User\Desktop\網路概論自主學習作業\P1\obj\Debug\net6.0-windows\ref\P2PMessenger.dll
