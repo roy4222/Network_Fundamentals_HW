@@ -12,3 +12,4 @@ C:\Users\User\Desktop\網路概論自主學習作業\P1\bin\Debug\net9.0-windows
 C:\Users\User\Desktop\網路概論自主學習作業\P1\bin\Debug\net9.0-windows\P2PMessenger.pdb
 C:\Users\User\Desktop\網路概論自主學習作業\P1\obj\Debug\net9.0-windows\P2PMessenger.genruntimeconfig.cache
 C:\Users\User\Desktop\網路概論自主學習作業\P1\obj\Debug\net9.0-windows\ref\P2PMessenger.dll
+C:\Users\User\Desktop\網路概論自主學習作業\P1\obj\Debug\net9.0-windows\P2PMessenger.sourcelink.json

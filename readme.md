@@ -209,6 +209,32 @@ if (this.InvokeRequired)
     this.Invoke(new Action(() => AppendMessage(message)));
 ```
 
+### 🔍 傳送事件機制
+```csharp
+// 按鈕點擊觸發傳送 (MainForm.cs:279)
+private async void BtnSendMessage_Click(object? sender, EventArgs e)
+    → 直接調用 SendMessageAsync()
+
+// Enter鍵觸發傳送 (MainForm.cs:287)  
+private async void TxtMessage_KeyPress(object? sender, KeyPressEventArgs e)
+    → 檢查Enter鍵後調用 SendMessageAsync()
+
+// 核心傳送邏輯 (MainForm.cs:297)
+private async Task SendMessageAsync()
+    → UdpSender.SendMessageAsync() → UI更新
+```
+
+### 🌐 IP位置取得機制
+| 取得方式 | 程式碼位置 | 用途 | 來源 |
+|---------|-----------|------|------|
+| **接收方IP** | `UdpListener.cs:136`<br/>`result.RemoteEndPoint.Address` | 自動偵測發送方IP | UDP封包標頭 |
+| **目標IP輸入** | `MainForm.cs:313`<br/>`txtRemoteIp.Text.Trim()` | 發送訊息目標 | 使用者輸入 |
+| **IP解析** | `UdpSender.cs:55`<br/>`IPAddress.Parse(remoteIp)` | 字串轉IP物件 | 參數傳入 |
+| **預設IP** | `MainForm.cs:85`<br/>`Text = "127.0.0.1"` | UI初始值 | 程式設定 |
+| **測試IP** | `TestUdpBasic.cs:38`<br/>`testIp = "127.0.0.1"` | 自動化測試 | 硬編碼 |
+
+**特別注意**：目前程式未實現本機IP自動偵測、DNS解析或網路介面卡列舉功能。
+
 ---
 
 ## 📄 授權與版權
