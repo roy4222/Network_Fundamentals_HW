@@ -7,7 +7,7 @@ namespace P2PMessenger
 {
     /// <summary>
     /// 主要表單 - UDP P2P訊息應用程式
-    /// 提供基本的發送和接收文字訊息功能
+    /// 提供基本的發送和接收文字訊息功能，支援暱稱系統
     /// </summary>
     public partial class MainForm : Form
     {
@@ -19,6 +19,7 @@ namespace P2PMessenger
         private TextBox txtLocalPort = null!;
         private TextBox txtRemoteIp = null!;
         private TextBox txtRemotePort = null!;
+        private TextBox txtNickname = null!;  // 新增：暱稱輸入欄位
         private TextBox txtMessage = null!;
         private TextBox txtReceivedMessages = null!;
         private Button btnStartListening = null!;
@@ -40,8 +41,8 @@ namespace P2PMessenger
         /// </summary>
         private void InitializeComponent()
         {
-            this.Text = "UDP P2P 訊息應用程式";
-            this.Size = new Size(600, 500);
+            this.Text = "UDP P2P 訊息應用程式 (支援暱稱)";
+            this.Size = new Size(600, 550);  // 增加高度以容納新控制項
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
@@ -101,11 +102,27 @@ namespace P2PMessenger
                 Size = new Size(80, 23)
             };
 
-            // 監聽控制按鈕
+            // 暱稱設定 (新增)
+            var lblNickname = new Label
+            {
+                Text = "您的暱稱:",
+                Location = new Point(10, 45),
+                Size = new Size(80, 23)
+            };
+            
+            txtNickname = new TextBox
+            {
+                Text = "使用者",  // 預設暱稱
+                Location = new Point(100, 42),
+                Size = new Size(120, 23),
+                PlaceholderText = "請輸入您的暱稱..."
+            };
+
+            // 監聽控制按鈕 (調整位置)
             btnStartListening = new Button
             {
                 Text = "開始監聽",
-                Location = new Point(10, 50),
+                Location = new Point(10, 80),  // 向下移動
                 Size = new Size(80, 30),
                 BackColor = Color.LightGreen
             };
@@ -113,32 +130,32 @@ namespace P2PMessenger
             btnStopListening = new Button
             {
                 Text = "停止監聽",
-                Location = new Point(100, 50),
+                Location = new Point(100, 80),  // 向下移動
                 Size = new Size(80, 30),
                 BackColor = Color.LightCoral,
                 Enabled = false
             };
 
-            // 狀態標籤
+            // 狀態標籤 (調整位置)
             lblStatus = new Label
             {
                 Text = "狀態: 未監聽",
-                Location = new Point(200, 55),
+                Location = new Point(200, 85),  // 向下移動
                 Size = new Size(200, 20),
                 ForeColor = Color.Blue
             };
 
-            // 訊息輸入
+            // 訊息輸入 (調整位置)
             var lblMessage = new Label
             {
                 Text = "發送訊息:",
-                Location = new Point(10, 100),
+                Location = new Point(10, 130),  // 向下移動
                 Size = new Size(80, 23)
             };
 
             txtMessage = new TextBox
             {
-                Location = new Point(10, 125),
+                Location = new Point(10, 155),  // 向下移動
                 Size = new Size(450, 23),
                 PlaceholderText = "請輸入要發送的訊息..."
             };
@@ -146,23 +163,23 @@ namespace P2PMessenger
             btnSendMessage = new Button
             {
                 Text = "發送",
-                Location = new Point(470, 125),
+                Location = new Point(470, 155),  // 向下移動
                 Size = new Size(60, 23),
                 BackColor = Color.LightBlue
             };
 
-            // 接收訊息顯示
+            // 接收訊息顯示 (調整位置)
             var lblReceived = new Label
             {
                 Text = "接收的訊息:",
-                Location = new Point(10, 160),
+                Location = new Point(10, 190),  // 向下移動
                 Size = new Size(100, 23)
             };
 
             txtReceivedMessages = new TextBox
             {
-                Location = new Point(10, 185),
-                Size = new Size(560, 250),
+                Location = new Point(10, 215),  // 向下移動
+                Size = new Size(560, 280),  // 調整高度
                 Multiline = true,
                 ScrollBars = ScrollBars.Vertical,
                 ReadOnly = true,
@@ -173,7 +190,8 @@ namespace P2PMessenger
             this.Controls.AddRange(new Control[]
             {
                 lblLocalPort, txtLocalPort, lblRemoteIp, txtRemoteIp,
-                lblRemotePort, txtRemotePort, btnStartListening, btnStopListening,
+                lblRemotePort, txtRemotePort, lblNickname, txtNickname,  // 新增暱稱控制項
+                btnStartListening, btnStopListening,
                 lblStatus, lblMessage, txtMessage, btnSendMessage,
                 lblReceived, txtReceivedMessages
             });
@@ -302,6 +320,7 @@ namespace P2PMessenger
             try
             {
                 string message = txtMessage.Text.Trim();
+                string nickname = txtNickname.Text.Trim();
                 string remoteIp = txtRemoteIp.Text.Trim();
                 
                 if (string.IsNullOrEmpty(message))
@@ -310,15 +329,23 @@ namespace P2PMessenger
                     return;
                 }
 
+                if (string.IsNullOrEmpty(nickname))
+                {
+                    MessageBox.Show("請輸入您的暱稱", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
                 if (int.TryParse(txtRemotePort.Text, out int remotePort))
                 {
                     if (udpSender != null)
                     {
-                        bool success = await udpSender.SendMessageAsync(message, remoteIp, remotePort);
+                        // 組合訊息格式：暱稱: 訊息內容
+                        string formattedMessage = $"{nickname}: {message}";
+                        bool success = await udpSender.SendMessageAsync(formattedMessage, remoteIp, remotePort);
                         
                         if (success)
                         {
-                            AppendMessage($"[發送] -> {remoteIp}:{remotePort} | {message}");
+                            AppendMessage($"[發送] -> {remoteIp}:{remotePort} | {nickname}說：{message}");
                             txtMessage.Clear();
                         }
                         else
@@ -354,7 +381,25 @@ namespace P2PMessenger
                 return;
             }
 
-            AppendMessage($"[接收] <- {senderIp}:{senderPort} | {message}");
+            // 解析訊息格式：暱稱: 訊息內容
+            string displayMessage;
+            if (message.Contains(": "))
+            {
+                // 找到第一個 ": " 的位置
+                int separatorIndex = message.IndexOf(": ");
+                string nickname = message.Substring(0, separatorIndex);
+                string content = message.Substring(separatorIndex + 2);
+                
+                // 格式化顯示：[時間] 暱稱說：訊息內容
+                displayMessage = $"{nickname}說：{content}";
+            }
+            else
+            {
+                // 如果沒有暱稱格式，直接顯示原始訊息
+                displayMessage = $"匿名用戶說：{message}";
+            }
+
+            AppendMessage($"[接收] <- {senderIp}:{senderPort} | {displayMessage}");
         }
 
         /// <summary>

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("P2PMessenger")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1ec5611743fcbb89f40a663c0c38defc122324e2")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+07d7e7e0b2474684e7e99c6f776de1dfbe0477a4")]
 [assembly: System.Reflection.AssemblyProductAttribute("P2PMessenger")]
 [assembly: System.Reflection.AssemblyTitleAttribute("UDP P2P Messenger")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
