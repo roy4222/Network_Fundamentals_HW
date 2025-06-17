@@ -13,23 +13,23 @@ namespace P2PMessenger
     public partial class MainForm : Form
     {
         // 網路通訊元件
-        private P2PNetworkManager networkManager;
+        private P2PNetworkManager networkManager = null!;
         
         // UI 控制項
-        private Panel drawingPanel;
-        private GroupBox networkSettingsGroup;
-        private TextBox localIpTextBox;
-        private TextBox remoteIpTextBox;
-        private TextBox portTextBox;
-        private Button connectButton;
-        private Button disconnectButton;
-        private Label statusLabel;
-        private Label coordinateLabel;
+        private Panel drawingPanel = null!;
+        private GroupBox networkSettingsGroup = null!;
+        private TextBox localIpTextBox = null!;
+        private TextBox remoteIpTextBox = null!;
+        private TextBox portTextBox = null!;
+        private Button connectButton = null!;
+        private Button disconnectButton = null!;
+        private Label statusLabel = null!;
+        private Label coordinateLabel = null!;
         
         // 繪圖相關
         private bool isDrawing = false;
         private Point lastPoint;
-        private Graphics drawingGraphics;
+        private Graphics drawingGraphics = null!;
 
         /// <summary>
         /// 初始化主視窗
@@ -226,7 +226,7 @@ namespace P2PMessenger
         /// <summary>
         /// 連線按鈕點擊事件
         /// </summary>
-        private void ConnectButton_Click(object sender, EventArgs e)
+        private void ConnectButton_Click(object? sender, EventArgs e)
         {
             try
             {
@@ -251,7 +251,7 @@ namespace P2PMessenger
         /// <summary>
         /// 斷線按鈕點擊事件
         /// </summary>
-        private void DisconnectButton_Click(object sender, EventArgs e)
+        private void DisconnectButton_Click(object? sender, EventArgs e)
         {
             networkManager.StopConnection();
             
@@ -264,7 +264,7 @@ namespace P2PMessenger
         /// <summary>
         /// 網路資料接收事件
         /// </summary>
-        private void NetworkManager_DataReceived(object sender, StrokeDataEventArgs e)
+        private void NetworkManager_DataReceived(object? sender, StrokeDataEventArgs e)
         {
             // 在 UI 執行緒中處理接收到的筆跡資料
             if (this.InvokeRequired)
@@ -280,7 +280,7 @@ namespace P2PMessenger
         /// <summary>
         /// 連線狀態變更事件
         /// </summary>
-        private void NetworkManager_ConnectionStatusChanged(object sender, ConnectionStatusEventArgs e)
+        private void NetworkManager_ConnectionStatusChanged(object? sender, ConnectionStatusEventArgs e)
         {
             if (this.InvokeRequired)
             {
@@ -310,7 +310,7 @@ namespace P2PMessenger
         /// <summary>
         /// 滑鼠按下事件 - 開始繪圖
         /// </summary>
-        private void DrawingPanel_MouseDown(object sender, MouseEventArgs e)
+        private void DrawingPanel_MouseDown(object? sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
             {
@@ -327,7 +327,7 @@ namespace P2PMessenger
         /// <summary>
         /// 滑鼠移動事件 - 繪製線條
         /// </summary>
-        private void DrawingPanel_MouseMove(object sender, MouseEventArgs e)
+        private void DrawingPanel_MouseMove(object? sender, MouseEventArgs e)
         {
             coordinateLabel.Text = $"座標: ({e.X}, {e.Y})";
             
@@ -359,7 +359,7 @@ namespace P2PMessenger
         /// <summary>
         /// 滑鼠放開事件 - 結束繪圖
         /// </summary>
-        private void DrawingPanel_MouseUp(object sender, MouseEventArgs e)
+        private void DrawingPanel_MouseUp(object? sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
             {
@@ -371,7 +371,7 @@ namespace P2PMessenger
         /// <summary>
         /// 繪圖區域重繪事件
         /// </summary>
-        private void DrawingPanel_Paint(object sender, PaintEventArgs e)
+        private void DrawingPanel_Paint(object? sender, PaintEventArgs e)
         {
             // 這裡可以重繪所有筆跡（如果需要持久化）
         }

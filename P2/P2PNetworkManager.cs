@@ -20,18 +20,18 @@ namespace P2PMessenger
         #region 私有欄位
 
         // TCP 伺服器 (Listener 功能)
-        private TcpListener tcpListener;
+        private TcpListener tcpListener = null!;
         private bool isListening = false;
-        private CancellationTokenSource listenerCancellationToken;
+        private CancellationTokenSource listenerCancellationToken = null!;
 
         // TCP 客戶端 (Sender 功能)
-        private TcpClient tcpClient;
-        private NetworkStream clientStream;
+        private TcpClient tcpClient = null!;
+        private NetworkStream clientStream = null!;
         private bool isConnected = false;
 
         // 網路設定
-        private string localIP;
-        private string remoteIP;
+        private string localIP = null!;
+        private string remoteIP = null!;
         private int port;
 
         // 執行緒同步
@@ -45,13 +45,13 @@ namespace P2PMessenger
         /// 資料接收事件
         /// 當接收到遠端筆跡資料時觸發
         /// </summary>
-        public event EventHandler<StrokeDataEventArgs> DataReceived;
+        public event EventHandler<StrokeDataEventArgs>? DataReceived;
 
         /// <summary>
         /// 連線狀態變更事件
         /// 當連線狀態改變時觸發
         /// </summary>
-        public event EventHandler<ConnectionStatusEventArgs> ConnectionStatusChanged;
+        public event EventHandler<ConnectionStatusEventArgs>? ConnectionStatusChanged;
 
         #endregion
 
@@ -167,7 +167,7 @@ namespace P2PMessenger
         /// 啟動 TCP Listener
         /// 監聽來自遠端的連線請求
         /// </summary>
-        private async Task StartListener()
+        private Task StartListener()
         {
             try
             {
@@ -182,6 +182,8 @@ namespace P2PMessenger
 
                 // 在背景執行緒中處理連線請求
                 _ = Task.Run(async () => await AcceptClientsAsync(listenerCancellationToken.Token));
+                
+                return Task.CompletedTask;
             }
             catch (Exception ex)
             {
@@ -228,7 +230,7 @@ namespace P2PMessenger
         /// </summary>
         private async Task HandleClientAsync(TcpClient client, CancellationToken cancellationToken)
         {
-            NetworkStream stream = null;
+            NetworkStream? stream = null;
             try
             {
                 stream = client.GetStream();
@@ -245,7 +247,8 @@ namespace P2PMessenger
                     }
 
                     // 處理接收到的資料
-                    await ProcessReceivedData(buffer, bytesRead, client.Client.RemoteEndPoint?.ToString() ?? "");
+                    string clientEndpoint = client.Client.RemoteEndPoint?.ToString() ?? "";
+                    await ProcessReceivedData(buffer, bytesRead, clientEndpoint);
                 }
             }
             catch (Exception ex)
@@ -267,12 +270,12 @@ namespace P2PMessenger
         /// 處理接收到的資料
         /// 實現「資料→筆跡記錄器」功能
         /// </summary>
-        private async Task ProcessReceivedData(byte[] buffer, int length, string sourceIP)
+        private Task ProcessReceivedData(byte[] buffer, int length, string sourceIP)
         {
             try
             {
                 string jsonData = Encoding.UTF8.GetString(buffer, 0, length);
-                StrokeData strokeData = JsonSerializer.Deserialize<StrokeData>(jsonData);
+                StrokeData? strokeData = JsonSerializer.Deserialize<StrokeData>(jsonData);
 
                 if (strokeData != null && strokeData.IsValid())
                 {
@@ -284,6 +287,8 @@ namespace P2PMessenger
             {
                 Console.WriteLine($"處理接收資料時發生錯誤: {ex.Message}");
             }
+            
+            return Task.CompletedTask;
         }
 
         /// <summary>
