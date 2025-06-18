@@ -1,23 +1,67 @@
 using System;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace ChatClient
 {
     /// <summary>
     /// 聊天客戶端主程式
-    /// 提供控制台介面來連線伺服器和測試基本功能
+    /// 支援圖形化介面和控制台模式
     /// </summary>
     class Program
     {
-        private static TcpClient? _client;
-        private static bool _isRunning = true;
-
+        [STAThread]
         static async Task Main(string[] args)
         {
             Console.WriteLine("==================================================");
             Console.WriteLine("        功能增強的多人線上聊天室 - 客戶端");
+            Console.WriteLine("        里程碑 2：使用者系統與群聊功能");
             Console.WriteLine("==================================================");
             Console.WriteLine();
+
+            // 檢查是否要使用控制台模式
+            bool useConsoleMode = args.Length > 0 && args[0].ToLower() == "--console";
+
+            if (useConsoleMode)
+            {
+                Console.WriteLine("啟動控制台模式...");
+                await RunConsoleMode();
+            }
+            else
+            {
+                Console.WriteLine("啟動圖形化介面...");
+                RunGuiMode();
+            }
+        }
+
+        /// <summary>
+        /// 啟動圖形化介面模式
+        /// </summary>
+        private static void RunGuiMode()
+        {
+            try
+            {
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                
+                var chatForm = new ChatForm();
+                Application.Run(chatForm);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"圖形化介面啟動失敗: {ex.Message}");
+                Console.WriteLine("正在切換到控制台模式...");
+                RunConsoleMode().GetAwaiter().GetResult();
+            }
+        }
+
+        /// <summary>
+        /// 啟動控制台模式
+        /// </summary>
+        private static async Task RunConsoleMode()
+        {
+            TcpClient? _client = null;
+            bool _isRunning = true;
 
             try
             {
@@ -28,10 +72,19 @@ namespace ChatClient
                 _client = new TcpClient(serverAddress, serverPort);
                 
                 // 註冊事件處理器
-                RegisterEventHandlers();
+                RegisterEventHandlers(_client);
                 
                 // 設定 Ctrl+C 處理
-                Console.CancelKeyPress += OnCancelKeyPress;
+                Console.CancelKeyPress += async (sender, e) =>
+                {
+                    e.Cancel = true;
+                    _isRunning = false;
+                    if (_client?.IsConnected == true)
+                    {
+                        await _client.LogoutAsync();
+                    }
+                    Environment.Exit(0);
+                };
                 
                 // 嘗試連線到伺服器
                 if (await _client.ConnectAsync())
@@ -39,10 +92,10 @@ namespace ChatClient
                     Console.WriteLine("連線成功！");
                     
                     // 登入
-                    await LoginAsync();
+                    await LoginAsync(_client);
                     
                     // 開始互動式聊天
-                    await StartChatAsync();
+                    await StartChatAsync(_client, () => _isRunning);
                 }
                 else
                 {
@@ -92,22 +145,20 @@ namespace ChatClient
         /// <summary>
         /// 註冊事件處理器
         /// </summary>
-        private static void RegisterEventHandlers()
+        private static void RegisterEventHandlers(TcpClient client)
         {
-            if (_client == null) return;
-
-            _client.MessageReceived += OnMessageReceived;
-            _client.UserListUpdated += OnUserListUpdated;
-            _client.ErrorOccurred += OnErrorOccurred;
-            _client.Disconnected += OnDisconnected;
+            client.MessageReceived += OnMessageReceived;
+            client.UserListUpdated += OnUserListUpdated;
+            client.ErrorOccurred += OnErrorOccurred;
+            client.Disconnected += OnDisconnected;
         }
 
         /// <summary>
         /// 登入流程
         /// </summary>
-        private static async Task LoginAsync()
+        private static async Task LoginAsync(TcpClient client)
         {
-            while (_client?.IsConnected == true)
+            while (client?.IsConnected == true)
             {
                 Console.Write("\n請輸入您的使用者名稱: ");
                 string? username = Console.ReadLine();
@@ -118,7 +169,7 @@ namespace ChatClient
                     continue;
                 }
 
-                if (await _client.LoginAsync(username))
+                if (await client.LoginAsync(username))
                 {
                     Console.WriteLine($"歡迎 {username}！");
                     break;
@@ -133,7 +184,7 @@ namespace ChatClient
         /// <summary>
         /// 開始互動式聊天
         /// </summary>
-        private static async Task StartChatAsync()
+        private static async Task StartChatAsync(TcpClient client, Func<bool> isRunning)
         {
             Console.WriteLine("\n=== 聊天室 ===");
             Console.WriteLine("指令說明:");
@@ -143,17 +194,17 @@ namespace ChatClient
             Console.WriteLine("  '/help' 顯示說明");
             Console.WriteLine();
 
-            while (_client?.IsConnected == true && _isRunning)
+            while (client?.IsConnected == true && isRunning())
             {
                 try
                 {
-                    Console.Write($"[{_client.Username}] ");
+                    Console.Write($"[{client.Username}] ");
                     string? input = Console.ReadLine();
                     
                     if (string.IsNullOrWhiteSpace(input))
                         continue;
 
-                    await ProcessUserInputAsync(input.Trim());
+                    await ProcessUserInputAsync(client, input.Trim());
                 }
                 catch (Exception ex)
                 {
@@ -165,29 +216,27 @@ namespace ChatClient
         /// <summary>
         /// 處理使用者輸入
         /// </summary>
-        private static async Task ProcessUserInputAsync(string input)
+        private static async Task ProcessUserInputAsync(TcpClient client, string input)
         {
-            if (_client == null || !_client.IsConnected) return;
+            if (!client.IsConnected) return;
 
             if (input.StartsWith("/"))
             {
                 // 處理指令
-                await ProcessCommandAsync(input);
+                await ProcessCommandAsync(client, input);
             }
             else
             {
                 // 發送廣播訊息
-                await _client.SendBroadcastMessageAsync(input);
+                await client.SendBroadcastMessageAsync(input);
             }
         }
 
         /// <summary>
         /// 處理指令
         /// </summary>
-        private static async Task ProcessCommandAsync(string command)
+        private static async Task ProcessCommandAsync(TcpClient client, string command)
         {
-            if (_client == null) return;
-
             string[] parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             
             switch (parts[0].ToLower())
@@ -197,7 +246,7 @@ namespace ChatClient
                     {
                         string targetUser = parts[1];
                         string message = string.Join(" ", parts, 2, parts.Length - 2);
-                        await _client.SendPrivateMessageAsync(targetUser, message);
+                        await client.SendPrivateMessageAsync(targetUser, message);
                     }
                     else
                     {
@@ -207,8 +256,8 @@ namespace ChatClient
 
                 case "/quit":
                     Console.WriteLine("正在離開聊天室...");
-                    _isRunning = false;
-                    await _client.LogoutAsync();
+                    await client.LogoutAsync();
+                    Environment.Exit(0);
                     break;
 
                 case "/help":
@@ -240,43 +289,26 @@ namespace ChatClient
         private static void OnMessageReceived(string message)
         {
             Console.WriteLine($"\n>>> {message}");
-            Console.Write($"[{_client?.Username}] ");
+            Console.Write($"[輸入] ");
         }
 
         private static void OnUserListUpdated(string[] users)
         {
             Console.WriteLine($"\n--- 線上使用者 ({users.Length}): {string.Join(", ", users)} ---");
-            Console.Write($"[{_client?.Username}] ");
+            Console.Write($"[輸入] ");
         }
 
         private static void OnErrorOccurred(string error)
         {
             Console.WriteLine($"\n❌ 錯誤: {error}");
-            Console.Write($"[{_client?.Username}] ");
+            Console.Write($"[輸入] ");
         }
 
         private static void OnDisconnected()
         {
             Console.WriteLine("\n--- 與伺服器的連線已中斷 ---");
-            _isRunning = false;
         }
 
-        /// <summary>
-        /// 處理 Ctrl+C 事件
-        /// </summary>
-        private static async void OnCancelKeyPress(object? sender, ConsoleCancelEventArgs e)
-        {
-            e.Cancel = true; // 取消預設的程式終止行為
-            Console.WriteLine("\n\n收到停止信號，正在退出...");
-            
-            _isRunning = false;
-            
-            if (_client?.IsConnected == true)
-            {
-                await _client.LogoutAsync();
-            }
-            
-            Environment.Exit(0);
-        }
+
     }
 } 

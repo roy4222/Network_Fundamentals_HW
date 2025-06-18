@@ -262,7 +262,8 @@ namespace ChatServer
             await BroadcastUserListAsync();
 
             // 廣播使用者加入訊息
-            await BroadcastMessageAsync($"系統訊息：{username} 加入聊天室", username);
+            string userJoinedMessage = MessageProtocol.CreateUserJoinedMessage(username);
+            await BroadcastToAllClientsAsync(userJoinedMessage);
         }
 
         /// <summary>
@@ -286,7 +287,8 @@ namespace ChatServer
                 Console.WriteLine($"[伺服器] 使用者 {username} 已離線，目前線上人數: {_clients.Count}");
 
                 // 廣播使用者離開訊息
-                await BroadcastMessageAsync($"系統訊息：{username} 離開聊天室", username);
+                string userLeftMessage = MessageProtocol.CreateUserLeftMessage(username);
+                await BroadcastToAllClientsAsync(userLeftMessage);
 
                 // 廣播更新的使用者列表
                 await BroadcastUserListAsync();
@@ -310,8 +312,11 @@ namespace ChatServer
                 return;
             }
 
-            string message = $"{clientConnection.Username}: {parts[0]}";
-            await BroadcastMessageAsync(message, clientConnection.Username);
+            // 使用改進的廣播訊息格式（含時間戳記和使用者名稱）
+            string broadcastMessage = MessageProtocol.CreateBroadcastMessage(clientConnection.Username, parts[0]);
+            await BroadcastToAllClientsAsync(broadcastMessage);
+            
+            Console.WriteLine($"[伺服器] {clientConnection.Username} 發送群聊訊息: {parts[0]}");
         }
 
         /// <summary>
@@ -340,11 +345,14 @@ namespace ChatServer
                 return;
             }
 
-            string privateMessage = $"[私訊] {clientConnection.Username}: {message}";
-            await SendToClientAsync(targetClient, MessageProtocol.CreateBroadcastMessage(privateMessage));
+            // 使用改進的私訊格式（含時間戳記）
+            string privateMessage = MessageProtocol.CreatePrivateMessage(clientConnection.Username, targetUsername, message);
+            await SendToClientAsync(targetClient, privateMessage);
 
             // 也發送給發送者確認
             await SendToClientAsync(clientConnection, MessageProtocol.CreateSuccessMessage($"私訊已發送給 {targetUsername}"));
+            
+            Console.WriteLine($"[伺服器] {clientConnection.Username} 發送私訊給 {targetUsername}: {message}");
         }
 
         /// <summary>
@@ -365,6 +373,22 @@ namespace ChatServer
 
             await Task.WhenAll(tasks);
             Console.WriteLine($"[伺服器] 廣播訊息: {message}");
+        }
+
+        /// <summary>
+        /// 廣播已格式化的訊息給所有客戶端
+        /// </summary>
+        private async Task BroadcastToAllClientsAsync(string formattedMessage)
+        {
+            var tasks = new List<Task>();
+
+            foreach (var client in _clients.Values)
+            {
+                tasks.Add(SendToClientAsync(client, formattedMessage));
+            }
+
+            await Task.WhenAll(tasks);
+            Console.WriteLine($"[伺服器] 廣播格式化訊息給所有客戶端");
         }
 
         /// <summary>
