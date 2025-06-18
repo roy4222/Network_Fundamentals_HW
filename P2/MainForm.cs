@@ -391,7 +391,7 @@ namespace P2PMessenger
 
         #endregion
 
-        /// <summary>
+        ///<summary>
         /// 視窗關閉時清理資源
         /// </summary>
         protected override void OnFormClosed(FormClosedEventArgs e)

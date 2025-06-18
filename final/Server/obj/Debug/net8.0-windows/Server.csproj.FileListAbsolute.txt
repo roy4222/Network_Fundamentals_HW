@@ -1,0 +1,15 @@
+C:\Users\User\Desktop\網路概論自主學習作業\final\Server\obj\Debug\net8.0-windows\Server.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\User\Desktop\網路概論自主學習作業\final\Server\obj\Debug\net8.0-windows\Server.AssemblyInfoInputs.cache
+C:\Users\User\Desktop\網路概論自主學習作業\final\Server\obj\Debug\net8.0-windows\Server.AssemblyInfo.cs
+C:\Users\User\Desktop\網路概論自主學習作業\final\Server\obj\Debug\net8.0-windows\Server.csproj.CoreCompileInputs.cache
+C:\Users\User\Desktop\網路概論自主學習作業\final\Server\obj\Debug\net8.0-windows\Server.sourcelink.json
+C:\Users\User\Desktop\網路概論自主學習作業\final\Server\bin\Debug\net8.0-windows\Server.exe
+C:\Users\User\Desktop\網路概論自主學習作業\final\Server\bin\Debug\net8.0-windows\Server.deps.json
+C:\Users\User\Desktop\網路概論自主學習作業\final\Server\bin\Debug\net8.0-windows\Server.runtimeconfig.json
+C:\Users\User\Desktop\網路概論自主學習作業\final\Server\bin\Debug\net8.0-windows\Server.dll
+C:\Users\User\Desktop\網路概論自主學習作業\final\Server\bin\Debug\net8.0-windows\Server.pdb
+C:\Users\User\Desktop\網路概論自主學習作業\final\Server\obj\Debug\net8.0-windows\Server.dll
+C:\Users\User\Desktop\網路概論自主學習作業\final\Server\obj\Debug\net8.0-windows\refint\Server.dll
+C:\Users\User\Desktop\網路概論自主學習作業\final\Server\obj\Debug\net8.0-windows\Server.pdb
+C:\Users\User\Desktop\網路概論自主學習作業\final\Server\obj\Debug\net8.0-windows\Server.genruntimeconfig.cache
+C:\Users\User\Desktop\網路概論自主學習作業\final\Server\obj\Debug\net8.0-windows\ref\Server.dll
