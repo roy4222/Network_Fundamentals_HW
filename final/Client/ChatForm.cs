@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Collections.Concurrent;
 
 namespace ChatClient
 {
@@ -14,6 +15,8 @@ namespace ChatClient
     {
         private readonly TcpClient _tcpClient;
         private bool _isConnected;
+        private readonly ConcurrentDictionary<string, bool> _unreadMessages = new ConcurrentDictionary<string, bool>();
+        private string[] _currentUserList = Array.Empty<string>();
 
         // UI 控制項
         private TextBox _chatDisplay = null!;
@@ -185,7 +188,7 @@ namespace ChatClient
             _connectButton.Click += async (s, e) => await ConnectToServer();
             _disconnectButton.Click += async (s, e) => await DisconnectFromServer();
             _sendButton.Click += async (s, e) => await SendMessage();
-            _privateMessageButton.Click += async (s, e) => await SendPrivateMessage();
+            _privateMessageButton.Click += (s, e) => SendPrivateMessage();
 
             // 輸入框 Enter 鍵發送
             _messageInput.KeyPress += async (s, e) =>
@@ -207,11 +210,33 @@ namespace ChatClient
                 }
             };
 
-            // 使用者列表雙擊私訊
-            _userList.DoubleClick += async (s, e) => await SendPrivateMessage();
+            // 使用者列表雙擊私訊 -> 改為 @ 功能
+            _userList.DoubleClick += (s, e) =>
+            {
+                if (_userList.SelectedItem is string selectedItem)
+                {
+                    // 解析出實際的使用者名稱 (移除星號)
+                    string targetUsername = selectedItem.Split(' ')[0];
+
+                    if (!string.IsNullOrEmpty(targetUsername))
+                    {
+                        // 標記為已讀並刷新列表
+                        if (_unreadMessages.TryRemove(targetUsername, out _))
+                        {
+                            RefreshUserListDisplay();
+                        }
+
+                        // 在訊息框中插入 @使用者名稱
+                        _messageInput.Text = $"@{targetUsername} ";
+                        _messageInput.Focus();
+                        _messageInput.Select(_messageInput.Text.Length, 0); // 將游標移到最後
+                    }
+                }
+            };
 
             // TCP 客戶端事件
             _tcpClient.MessageReceived += OnMessageReceived;
+            _tcpClient.PrivateMessageReceived += OnPrivateMessageReceived;
             _tcpClient.UserListUpdated += OnUserListUpdated;
             _tcpClient.ErrorOccurred += OnErrorOccurred;
             _tcpClient.Disconnected += OnDisconnected;
@@ -299,57 +324,70 @@ namespace ChatClient
         }
 
         /// <summary>
-        /// 發送群聊訊息
+        /// 發送訊息 (廣播或私訊)
         /// </summary>
         private async Task SendMessage()
         {
-            if (!_isConnected || string.IsNullOrWhiteSpace(_messageInput.Text))
-                return;
-
-            try
+            string message = _messageInput.Text.Trim();
+            if (string.IsNullOrEmpty(message) || !_isConnected)
             {
-                string message = _messageInput.Text.Trim();
+                return;
+            }
+
+            // 檢查是否為私訊 (以 @username 開頭)
+            if (message.StartsWith("@"))
+            {
+                string[] parts = message.Split(new[] { ' ' }, 2);
+                if (parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[1]))
+                {
+                    string targetUsername = parts[0].Substring(1); // 移除 @
+                    string privateMessage = parts[1];
+
+                    // 不能私訊自己
+                    if (targetUsername.Equals(_tcpClient.Username, StringComparison.OrdinalIgnoreCase))
+                    {
+                        MessageBox.Show("不能私訊自己。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    
+                    await _tcpClient.SendPrivateMessageAsync(targetUsername, privateMessage);
+                    _messageInput.Clear();
+                }
+                else
+                {
+                    // 格式不正確的提示
+                    MessageBox.Show("私訊格式不正確，請使用 @使用者名稱 訊息 的格式。", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+            else
+            {
+                // 廣播訊息
                 await _tcpClient.SendBroadcastMessageAsync(message);
                 _messageInput.Clear();
-                _messageInput.Focus();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"發送訊息失敗: {ex.Message}", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         /// <summary>
-        /// 發送私人訊息
+        /// 發送私人訊息 (此方法已由 SendMessage 中的 @ 功能取代)
         /// </summary>
-        private async Task SendPrivateMessage()
+        private void SendPrivateMessage()
         {
-            if (!_isConnected || _userList.SelectedItem == null)
+            if (_userList.SelectedItem == null)
             {
-                MessageBox.Show("請選擇要私訊的使用者", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("請先選擇要私訊的使用者", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            string targetUser = _userList.SelectedItem.ToString()!;
-            if (targetUser == _tcpClient.Username)
+            string targetUsername = _userList.SelectedItem.ToString()!;
+            if (targetUsername.Equals(_tcpClient.Username, StringComparison.OrdinalIgnoreCase))
             {
-                MessageBox.Show("不能私訊自己", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("不能私訊自己。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-
-            string? message = PrivateMessageDialog.ShowDialog(targetUser);
-
-            if (!string.IsNullOrWhiteSpace(message))
-            {
-                try
-                {
-                    await _tcpClient.SendPrivateMessageAsync(targetUser, message);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"發送私訊失敗: {ex.Message}", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
+            
+            // 這裡可以保留舊的彈窗邏輯作為備用，或完全移除
+            // 為了簡化，我們暫時讓它不做任何事，因為新邏輯在 SendMessage 中
+            MessageBox.Show("私訊功能已整合至主輸入框，請雙擊使用者列表中的名稱，然後在輸入框中以 @使用者 格式發送。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>
@@ -408,23 +446,51 @@ namespace ChatClient
             AppendMessage(message);
         }
 
+        private void OnPrivateMessageReceived(string sender, string message)
+        {
+            AppendMessage(message);
+
+            // 如果不是自己發的訊息，就標記為未讀
+            if (sender != _tcpClient.Username)
+            {
+                _unreadMessages[sender] = true;
+                RefreshUserListDisplay();
+            }
+        }
+
         /// <summary>
         /// 處理使用者列表更新
         /// </summary>
         private void OnUserListUpdated(string[] users)
         {
+            _currentUserList = users;
+            RefreshUserListDisplay();
+        }
+
+        private void RefreshUserListDisplay()
+        {
             if (this.InvokeRequired)
             {
-                this.Invoke(new Action(() => OnUserListUpdated(users)));
+                this.Invoke(new Action(RefreshUserListDisplay));
                 return;
             }
 
+            _userList.BeginUpdate();
             _userList.Items.Clear();
-            foreach (string user in users.OrderBy(u => u))
+            foreach (var user in _currentUserList)
             {
-                _userList.Items.Add(user);
+                if (_unreadMessages.ContainsKey(user))
+                {
+                    _userList.Items.Add($"{user} (*)");
+                }
+                else
+                {
+                    _userList.Items.Add(user);
+                }
             }
-            _userCountLabel.Text = $"線上人數: {users.Length}";
+            _userList.EndUpdate();
+
+            _userCountLabel.Text = $"線上人數: {_currentUserList.Length}";
         }
 
         /// <summary>

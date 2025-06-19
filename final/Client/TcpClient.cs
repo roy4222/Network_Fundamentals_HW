@@ -28,6 +28,7 @@ namespace ChatClient
         // 事件處理
         public event Action<string>? MessageReceived;
         public event Action<string[]>? UserListUpdated;
+        public event Action<string, string>? PrivateMessageReceived;
         public event Action<string>? ErrorOccurred;
         public event Action? Disconnected;
 
@@ -198,7 +199,7 @@ namespace ChatClient
         /// <summary>
         /// 斷線
         /// </summary>
-        public async Task DisconnectAsync()
+        public Task DisconnectAsync()
         {
             try
             {
@@ -221,6 +222,7 @@ namespace ChatClient
             {
                 Console.WriteLine($"[客戶端] 斷線時發生錯誤: {ex.Message}");
             }
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -267,16 +269,18 @@ namespace ChatClient
                 {
                     try
                     {
-                        string? message = await _reader!.ReadLineAsync();
-                        
-                        if (string.IsNullOrEmpty(message))
+                        var line = await _reader.ReadLineAsync(cancellationToken);
+                        if (line == null)
                         {
-                            Console.WriteLine("[客戶端] 伺服器連線中斷");
+                            Console.WriteLine("[客戶端] 伺服器已關閉連線");
                             break;
                         }
-                        
-                        Console.WriteLine($"[客戶端] 收到伺服器訊息: {message}");
-                        await ProcessServerMessageAsync(message);
+
+                        if (!string.IsNullOrWhiteSpace(line))
+                        {
+                            Console.WriteLine($"[客戶端] 收到伺服器訊息: {line}");
+                            ProcessServerMessageAsync(line);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -299,107 +303,60 @@ namespace ChatClient
         }
 
         /// <summary>
-        /// 處理從伺服器收到的訊息
+        /// 處理從伺服器收到的單一訊息
         /// </summary>
-        private async Task ProcessServerMessageAsync(string message)
+        private void ProcessServerMessageAsync(string message)
         {
-            var (messageType, parts) = MessageProtocol.ParseMessage(message);
-
-            switch (messageType)
+            try
             {
-                case MessageProtocol.BROADCAST:
-                    // 廣播訊息格式：BROADCAST:timestamp:username:message_content
-                    if (parts.Length >= 3)
-                    {
-                        string timestamp = parts[0];
-                        string username = parts[1];
-                        string content = parts[2];
-                        string formattedMessage = MessageProtocol.FormatBroadcastDisplay(timestamp, username, content);
-                        MessageReceived?.Invoke(formattedMessage);
-                    }
-                    else if (parts.Length > 0)
-                    {
-                        // 向後相容舊格式
-                        MessageReceived?.Invoke(parts[0]);
-                    }
-                    break;
+                var (messageType, content) = MessageProtocol.ParseMessage(message);
 
-                case MessageProtocol.PRIVATE:
-                    // 私訊格式：PRIVATE:timestamp:sender_username:target_username:message_content
-                    if (parts.Length >= 4)
-                    {
-                        string timestamp = parts[0];
-                        string senderUsername = parts[1];
-                        string content = parts[3]; // parts[2] 是目標使用者，這裡是自己
-                        string formattedMessage = MessageProtocol.FormatPrivateDisplay(timestamp, senderUsername, content);
-                        MessageReceived?.Invoke(formattedMessage);
-                    }
-                    break;
+                switch (messageType)
+                {
+                    case MessageProtocol.BROADCAST:
+                    case MessageProtocol.SYSTEM_NOTIFICATION:
+                    case MessageProtocol.USER_JOINED:
+                    case MessageProtocol.USER_LEFT:
+                    case MessageProtocol.SUCCESS:
+                        MessageReceived?.Invoke(content[0]);
+                        break;
+                    
+                    case MessageProtocol.PRIVATE:
+                        // 私訊格式：senderUsername:formattedMessage
+                        var privateParts = content[0].Split(new[] { ':' }, 2);
+                        if (privateParts.Length == 2)
+                        {
+                            PrivateMessageReceived?.Invoke(privateParts[0], privateParts[1]);
+                        }
+                        else
+                        {
+                            // 處理格式不符的私訊
+                            MessageReceived?.Invoke(content[0]);
+                        }
+                        break;
 
-                case MessageProtocol.USER_LIST:
-                    if (parts.Length > 0 && !string.IsNullOrEmpty(parts[0]))
-                    {
-                        string[] users = parts[0].Split(',', StringSplitOptions.RemoveEmptyEntries);
+                    case MessageProtocol.USER_LIST:
+                        var users = content[0].Split(',');
                         UserListUpdated?.Invoke(users);
-                    }
-                    else
-                    {
-                        UserListUpdated?.Invoke(new string[0]);
-                    }
-                    break;
+                        break;
 
-                case MessageProtocol.USER_JOINED:
-                    // 使用者加入通知：USER_JOINED:timestamp:username
-                    if (parts.Length >= 2)
-                    {
-                        string timestamp = parts[0];
-                        string username = parts[1];
-                        string formattedMessage = MessageProtocol.FormatUserJoinedDisplay(timestamp, username);
-                        MessageReceived?.Invoke(formattedMessage);
-                    }
-                    break;
+                    case MessageProtocol.ERROR:
+                        ErrorOccurred?.Invoke(content[0]);
+                        break;
 
-                case MessageProtocol.USER_LEFT:
-                    // 使用者離開通知：USER_LEFT:timestamp:username
-                    if (parts.Length >= 2)
-                    {
-                        string timestamp = parts[0];
-                        string username = parts[1];
-                        string formattedMessage = MessageProtocol.FormatUserLeftDisplay(timestamp, username);
-                        MessageReceived?.Invoke(formattedMessage);
-                    }
-                    break;
-
-                case MessageProtocol.SYSTEM_NOTIFICATION:
-                    // 系統通知：SYSTEM_NOTIFICATION:timestamp:message
-                    if (parts.Length >= 2)
-                    {
-                        string timestamp = parts[0];
-                        string content = parts[1];
-                        string formattedMessage = MessageProtocol.FormatSystemNotificationDisplay(timestamp, content);
-                        MessageReceived?.Invoke(formattedMessage);
-                    }
-                    break;
-
-                case MessageProtocol.SUCCESS:
-                    if (parts.Length > 0)
-                    {
-                        Console.WriteLine($"[客戶端] 成功: {parts[0]}");
-                        MessageReceived?.Invoke($"✓ {parts[0]}");
-                    }
-                    break;
-
-                case MessageProtocol.ERROR:
-                    if (parts.Length > 0)
-                    {
-                        Console.WriteLine($"[客戶端] 錯誤: {parts[0]}");
-                        ErrorOccurred?.Invoke(parts[0]);
-                    }
-                    break;
-
-                default:
-                    Console.WriteLine($"[客戶端] 收到未知訊息類型: {messageType}");
-                    break;
+                    case "LOGIN_SUCCESS":
+                        MessageReceived?.Invoke("✓ 登入成功");
+                        break;
+                        
+                    default:
+                        Console.WriteLine($"[客戶端] 收到未處理的訊息類型: {messageType}");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[客戶端] 處理伺服器訊息時發生錯誤: {ex.Message}");
+                ErrorOccurred?.Invoke($"處理訊息時發生錯誤: {ex.Message}");
             }
         }
     }

@@ -324,35 +324,35 @@ namespace ChatServer
         /// </summary>
         private async Task HandlePrivateMessageAsync(ClientConnection clientConnection, string[] parts)
         {
-            if (string.IsNullOrEmpty(clientConnection.Username))
+            if (parts.Length < 2 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
             {
-                await SendToClientAsync(clientConnection, MessageProtocol.CreateErrorMessage("請先登入"));
+                await SendToClientAsync(clientConnection, MessageProtocol.CreateErrorMessage("私訊格式錯誤，應為 PRIVATE:target_user:message"));
                 return;
             }
 
-            if (parts.Length < 2)
-            {
-                await SendToClientAsync(clientConnection, MessageProtocol.CreateErrorMessage("私訊格式錯誤"));
-                return;
-            }
-
+            string senderUsername = clientConnection.Username;
             string targetUsername = parts[0];
             string message = parts[1];
 
-            if (!_clients.TryGetValue(targetUsername, out var targetClient))
+            Console.WriteLine($"[伺服器] {senderUsername} 發送私訊給 {targetUsername}: {message}");
+
+            // 檢查目標使用者是否存在且在線上
+            if (_clients.TryGetValue(targetUsername, out var targetClient))
             {
-                await SendToClientAsync(clientConnection, MessageProtocol.CreateErrorMessage($"使用者 {targetUsername} 不在線上"));
-                return;
+                string formattedMessageForTarget = MessageProtocol.FormatPrivateDisplay(DateTime.Now.ToString("HH:mm:ss"), senderUsername, message);
+                await SendToClientAsync(targetClient, MessageProtocol.CreatePrivateMessage(senderUsername, formattedMessageForTarget));
+                
+                // 向發送者顯示成功回饋
+                string successMessage = $"✓ 私訊已發送給 {targetUsername}";
+                await SendToClientAsync(clientConnection, MessageProtocol.CreateSuccessMessage(successMessage));
             }
-
-            // 使用改進的私訊格式（含時間戳記）
-            string privateMessage = MessageProtocol.CreatePrivateMessage(clientConnection.Username, targetUsername, message);
-            await SendToClientAsync(targetClient, privateMessage);
-
-            // 也發送給發送者確認
-            await SendToClientAsync(clientConnection, MessageProtocol.CreateSuccessMessage($"私訊已發送給 {targetUsername}"));
-            
-            Console.WriteLine($"[伺服器] {clientConnection.Username} 發送私訊給 {targetUsername}: {message}");
+            else
+            {
+                // 目標使用者不存在或已離線
+                string errorMessage = $"目標使用者 '{targetUsername}' 不在線上或不存在";
+                await SendToClientAsync(clientConnection, MessageProtocol.CreateErrorMessage(errorMessage));
+                Console.WriteLine($"[伺服器] 私訊失敗: {errorMessage}");
+            }
         }
 
         /// <summary>
