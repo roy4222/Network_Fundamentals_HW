@@ -310,15 +310,34 @@ namespace ChatClient
             try
             {
                 var (messageType, content) = MessageProtocol.ParseMessage(message);
+                string timestamp = DateTime.Now.ToString("HH:mm:ss");
 
                 switch (messageType)
                 {
                     case MessageProtocol.BROADCAST:
-                    case MessageProtocol.SYSTEM_NOTIFICATION:
-                    case MessageProtocol.USER_JOINED:
-                    case MessageProtocol.USER_LEFT:
+                        // 廣播格式為 "username:message"
+                        var broadcastParts = content[0].Split(new[] { ':' }, 2);
+                        if (broadcastParts.Length == 2)
+                        {
+                            MessageReceived?.Invoke(MessageProtocol.FormatBroadcastDisplay(timestamp, broadcastParts[0], broadcastParts[1]));
+                        }
+                        else
+                        {
+                            MessageReceived?.Invoke(content[0]); // Fallback
+                        }
+                        break;
+
                     case MessageProtocol.SUCCESS:
-                        MessageReceived?.Invoke(content[0]);
+                    case MessageProtocol.SYSTEM_NOTIFICATION:
+                        MessageReceived?.Invoke(MessageProtocol.FormatSystemNotificationDisplay(timestamp, content[0]));
+                        break;
+
+                    case MessageProtocol.USER_JOINED:
+                        MessageReceived?.Invoke(MessageProtocol.FormatUserJoinedDisplay(timestamp, content[0]));
+                        break;
+
+                    case MessageProtocol.USER_LEFT:
+                        MessageReceived?.Invoke(MessageProtocol.FormatUserLeftDisplay(timestamp, content[0]));
                         break;
                     
                     case MessageProtocol.PRIVATE:
@@ -344,7 +363,7 @@ namespace ChatClient
                         ErrorOccurred?.Invoke(content[0]);
                         break;
 
-                    case "LOGIN_SUCCESS":
+                    case "LOGIN_SUCCESS": // 這個伺服器沒在用，但先留著
                         MessageReceived?.Invoke("✓ 登入成功");
                         break;
                         
