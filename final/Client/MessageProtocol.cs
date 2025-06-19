@@ -82,15 +82,25 @@ namespace ChatClient
                 return (ERROR, new[] { "空白訊息" });
             }
 
-            string[] parts = message.Split(SEPARATOR);
-            if (parts.Length < 2)
-            {
-                return (ERROR, new[] { "訊息格式錯誤" });
-            }
+            // 只在第一個分隔符號處分割，以區分訊息類型和內容
+            // 伺服器發送的內容已預先格式化，可能包含冒號
+            string[] parts = message.Split(new[] { SEPARATOR }, 2, StringSplitOptions.None);
 
-            string messageType = parts[0];
-            string[] content = new string[parts.Length - 1];
-            Array.Copy(parts, 1, content, 0, content.Length);
+            string messageType;
+            string[] content;
+
+            if (parts.Length == 1)
+            {
+                // 如果沒有分隔符，整個訊息就是類型，沒有內容
+                messageType = parts[0];
+                content = Array.Empty<string>();
+            }
+            else // parts.Length is 2
+            {
+                // 內容是分隔符號之後的所有部分
+                messageType = parts[0];
+                content = new[] { parts[1] };
+            }
 
             Console.WriteLine($"[客戶端] 解析訊息 - 類型: {messageType}, 內容: {string.Join(", ", content)}");
             return (messageType, content);
